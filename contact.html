@@ -545,7 +545,14 @@
     if(btn){btn.disabled=true;}
     fetch(action,{method:'POST',body:new FormData(f),headers:{'Accept':'application/json'}})
       .then(function(r){
-        if(r.ok){f.reset();showFormMsg('Thanks \u2014 your enquiry has been sent. We\'ll be in touch shortly.', true);}
+        if(r.ok){
+          var _sector = (document.getElementById('c_sector')||{}).value || 'not specified';
+          f.reset();
+          showFormMsg('Thanks \u2014 your enquiry has been sent. We\'ll be in touch shortly.', true);
+          if(typeof gtag==='function'){
+            gtag('event','generate_lead',{ form_name:'contact_enquiry', sector:_sector });
+          }
+        }
         else{showFormMsg('Sorry, something went wrong. Please call us on 020 8658 1994.', false);}
       })
       .catch(function(){showFormMsg('Sorry, something went wrong. Please call us on 020 8658 1994.', false);})
@@ -561,6 +568,43 @@
     document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
   }else{document.querySelectorAll('.reveal').forEach(function(el){el.classList.add('in');});}
 
+</script>
+
+<script>
+  /* ---- GA4 custom event tracking ----
+     Tracks the actions that matter to the business:
+       phone_call   — any tap on a phone number (which number + where on the page)
+       quote_click  — any click on a "Request a quote" CTA
+       generate_lead— a successfully submitted enquiry form (contact page)
+  */
+  (function(){
+    function ev(name, params){
+      if (typeof gtag === 'function') gtag('event', name, params || {});
+    }
+    document.addEventListener('click', function(e){
+      var a = e.target.closest && e.target.closest('a');
+      if(!a) return;
+      var href = a.getAttribute('href') || '';
+
+      // Phone taps
+      if(href.indexOf('tel:') === 0){
+        var num = href.replace('tel:','');
+        ev('phone_call', {
+          phone_number: num,
+          line_type: num.indexOf('+4477') === 0 ? 'call_out' : 'main',
+          link_location: a.closest('header') ? 'header'
+                        : a.closest('footer') ? 'footer'
+                        : a.closest('.hero') ? 'hero' : 'page',
+          page_path: location.pathname
+        });
+      }
+
+      // Quote CTA clicks
+      else if(href.indexOf('contact.html') === 0 && /quote/i.test(a.textContent)){
+        ev('quote_click', { link_location: a.closest('.hero') ? 'hero' : 'page', page_path: location.pathname });
+      }
+    }, true);
+  })();
 </script>
 </body>
 </html>
